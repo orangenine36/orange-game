@@ -168,7 +168,7 @@
     <div id="continue-buttons" style="display:none;">
         <button class="btn-continue" onclick="continueGame()">继续挑战下一级 ▶</button>
     </div>
-    <div class="log" id="log">🌟 欢迎！高风险高回报，你能走到最后吗？</div>
+    <div class="log" id="log">🌟 欢迎！全球玩家共享排名，你能上榜吗？</div>
 </div>
 
 <div class="right-panel">
@@ -181,11 +181,11 @@
         <li>🛡️ 保险：支付 50% 成本，失败免受奖金扣除。</li>
         <li>🔥 连胜 ≥3 次，额外奖励 20% 奖金。</li>
         <li>✨ 每次挑战 30% 概率触发随机事件。</li>
-        <li>🏆 历史前三名永久保存。</li>
+        <li>🌍 历史前三名全球共享（通过 GitHub Issue）。</li>
     </ul>
     <h3>🏆 名人堂</h3>
     <ul class="record-list" id="top3-list">
-        <li>暂无记录</li>
+        <li>加载中...</li>
     </ul>
     <div style="margin-top:auto; font-size:clamp(10px,1.2vw,14px); color:#555;">
         8 级挑战 · 前期友好 · 后期地狱
@@ -193,31 +193,39 @@
 </div>
 
 <script>
+    // ============ ⚠️ 只修改下面这行 ⚠️ ============
+    const TOKEN = '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';
+    // =============================================
+
+    const OWNER = 'orange36';
+    const REPO = 'orange-game';
+    const ISSUE_NUMBER = 1;
+    const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/issues/${ISSUE_NUMBER}`;
+
     // ============ 游戏核心数据 ============
     let money = 1000;
     let streakBonus = 0;
     let level = 1;
     let winStreak = 0;
     let restartCount = 0;
-    const costPenaltyRate = 0.12;       // 每次主动重置成本+12%
+    const costPenaltyRate = 0.12;
 
     const BRIBE_COST_PER_PERCENT = 150;
-    const MAX_TOTAL_PROB = 0.65;        // 上限65%
+    const MAX_TOTAL_PROB = 0.65;
     let bribeTotalSpent = 0;
     let insuranceActive = false;
 
     let topRecords = [];
 
-    // 8级难度曲线：前期简单（高概率低成本），后期极难
     const levels = [
-        { cost: 60,  prob: 0.75, reward: 90 },    // L1 极易，期望净收益 +7.5
-        { cost: 120, prob: 0.65, reward: 220 },   // L2 期望 +23
-        { cost: 200, prob: 0.55, reward: 400 },   // L3 期望 +20
-        { cost: 350, prob: 0.40, reward: 850 },   // L4 期望 -10
-        { cost: 600, prob: 0.28, reward: 1800 },  // L5 期望 -96
-        { cost: 1000,prob: 0.18, reward: 4000 },  // L6 期望 -280
-        { cost: 1800,prob: 0.08, reward: 15000 }, // L7 期望 -600
-        { cost: 3000,prob: 0.03, reward: 80000 }  // L8 极难，期望 -600
+        { cost: 60,  prob: 0.75, reward: 90 },
+        { cost: 120, prob: 0.65, reward: 220 },
+        { cost: 200, prob: 0.55, reward: 400 },
+        { cost: 350, prob: 0.40, reward: 850 },
+        { cost: 600, prob: 0.28, reward: 1800 },
+        { cost: 1000,prob: 0.18, reward: 4000 },
+        { cost: 1800,prob: 0.08, reward: 15000 },
+        { cost: 3000,prob: 0.03, reward: 80000 }
     ];
     const maxLevel = levels.length;
 
@@ -229,32 +237,62 @@
         { desc: "市场波动，扣除连胜奖金10%。", effect: () => { let loss = Math.floor(streakBonus * 0.1); money = Math.max(0, money - loss); streakBonus -= loss; } },
     ];
 
-    // ============ 辅助函数 ============
-    function getEffectiveCost(original) {
-        return Math.floor(original * (1 + restartCount * costPenaltyRate));
+    // ============ GitHub Issue API 函数 ============
+    async function readTopRecords() {
+        try {
+            const response = await fetch(API_URL, {
+                headers: {
+                    'Authorization': `token ${TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            if (!response.ok) throw new Error('读取失败');
+            const issue = await response.json();
+            const match = issue.body.match(/```json\n([\s\S]*?)\n```/);
+            if (match && match[1]) {
+                topRecords = JSON.parse(match[1]);
+            } else {
+                topRecords = JSON.parse(issue.body);
+            }
+        } catch(e) {
+            console.error('读取排名失败:', e);
+            topRecords = [];
+        }
+        renderTopRecords();
     }
 
-    function getEffectiveProb(baseProb) {
-        let bonus = (bribeTotalSpent / BRIBE_COST_PER_PERCENT) * 0.01;
-        return Math.min(baseProb + bonus, MAX_TOTAL_PROB);
-    }
-
-    function loadTopRecords() {
-        const saved = localStorage.getItem('gambling_top3');
-        if (saved) {
-            try { topRecords = JSON.parse(saved); } catch(e) { topRecords = []; }
+    async function writeTopRecords() {
+        try {
+            const body = '```json\n' + JSON.stringify(topRecords, null, 2) + '\n```';
+            await fetch(API_URL, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ body: body })
+            });
+            console.log('✅ 排名已同步');
+        } catch(e) {
+            console.error('保存排名失败:', e);
         }
     }
 
-    function saveTopRecords() {
-        localStorage.setItem('gambling_top3', JSON.stringify(topRecords));
+    function loadTopRecords() {
+        readTopRecords();
     }
 
-    function updateTopRecords(newMoney, newName) {
+    function saveTopRecords() {
+        writeTopRecords();
+    }
+
+    async function updateTopRecords(newMoney, newName) {
+        await readTopRecords();
         topRecords.push({ money: newMoney, name: newName });
         topRecords.sort((a, b) => b.money - a.money);
         topRecords = topRecords.slice(0, 3);
-        saveTopRecords();
+        await writeTopRecords();
         renderTopRecords();
     }
 
@@ -273,11 +311,21 @@
     function checkAndUpdateRecords() {
         if (money <= 0) return;
         if (topRecords.length < 3 || money > topRecords[topRecords.length-1].money) {
-            let name = prompt("🎉 恭喜进入历史前三！请为你的记录命名：", "传奇赌徒");
+            let name = prompt("🎉 恭喜进入全球前三！请为你的记录命名：", "传奇赌徒");
             if (name === null || name.trim() === "") name = "传奇赌徒";
             name = name.trim();
             updateTopRecords(money, name);
         }
+    }
+
+    // ============ 辅助函数 ============
+    function getEffectiveCost(original) {
+        return Math.floor(original * (1 + restartCount * costPenaltyRate));
+    }
+
+    function getEffectiveProb(baseProb) {
+        let bonus = (bribeTotalSpent / BRIBE_COST_PER_PERCENT) * 0.01;
+        return Math.min(baseProb + bonus, MAX_TOTAL_PROB);
     }
 
     function log(msg) {
@@ -368,7 +416,6 @@
         insuranceActive = false;
 
         if (Math.random() < effectiveProb) {
-            // 获胜
             let reward = lv.reward;
             winStreak++;
             if (winStreak >= 3) {
@@ -400,7 +447,6 @@
                 document.getElementById('continue-buttons').style.display = 'block';
             }
         } else {
-            // 失败
             msg += "❌ 失败。";
             if (!hadInsurance && streakBonus > 0) {
                 let loss = Math.floor(streakBonus / 3);
@@ -469,7 +515,6 @@
 
     // 初始化
     loadTopRecords();
-    renderTopRecords();
     updateUI();
 </script>
 </body>
