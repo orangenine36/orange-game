@@ -6,7 +6,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 860px;
             margin: 20px auto;
             padding: 15px;
             background: #f7f7f7;
@@ -19,7 +19,7 @@
             min-width: 0;
         }
         .right-panel {
-            width: 220px;
+            width: 240px;
             background: white;
             border-radius: 12px;
             padding: 15px;
@@ -41,6 +41,15 @@
         }
         .right-panel li {
             margin-bottom: 6px;
+        }
+        .record-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        .record-list li {
+            padding: 4px 0;
+            border-bottom: 1px dashed #ddd;
         }
         .game-title {
             text-align: center;
@@ -68,6 +77,7 @@
         .warning { color: #d35400; }
         .highlight { color: #2980b9; }
         .bribe-info { color: #e67e22; }
+        .streak-highlight { color: #e74c3c; font-weight: bold; }
         .buttons {
             display: flex;
             gap: 10px;
@@ -84,6 +94,7 @@
         .btn-challenge { background: #27ae60; color: white; }
         .btn-challenge:disabled { background: #aaa; cursor: not-allowed; }
         .btn-bribe { background: #f39c12; color: white; }
+        .btn-insurance { background: #16a085; color: white; }
         .btn-reset { background: #3498db; color: white; }
         .btn-restart { background: #8e44ad; color: white; }
         .btn-exit { background: #e74c3c; color: white; }
@@ -106,18 +117,20 @@
         <div class="stat"><span class="label">当前资金：</span><span class="value" id="money">1000</span></div>
         <div class="stat"><span class="label">当前连胜奖金：</span><span class="value" id="streakBonus">0</span></div>
         <div class="stat"><span class="label">当前等级：</span><span class="value" id="level">1</span></div>
+        <div class="stat"><span class="label">当前连胜次数：</span><span class="value streak-highlight" id="winStreak">0</span></div>
         <div class="stat"><span class="label">挑战成本：</span><span class="value" id="cost">-</span></div>
         <div class="stat"><span class="label">获胜概率：</span><span class="value" id="prob">-</span></div>
-        <div class="stat" id="bribeRow" style="display:none;"><span class="label bribe-info">贿赂提升概率：</span><span class="value bribe-info" id="bribeProb">-</span></div>
+        <div class="stat" id="bribeRow" style="display:none;"><span class="label bribe-info">贿赂提升：</span><span class="value bribe-info" id="bribeProb">-</span></div>
+        <div class="stat" id="insuranceRow" style="display:none;"><span class="label" style="color:#16a085;">保险状态：</span><span class="value" style="color:#16a085;" id="insuranceStatus">已购买</span></div>
         <div class="stat"><span class="label">获胜奖金：</span><span class="value" id="reward">-</span></div>
         <hr>
         <div class="stat"><span class="label">主动重置次数：</span><span class="value warning" id="restart">0</span></div>
         <div class="stat"><span class="label">成本倍率：</span><span class="value warning" id="multiplier">1.0x</span></div>
-        <div class="stat"><span class="label">🏆 历史最高资金：</span><span class="value high-score" id="highscore">1000 (无名)</span></div>
     </div>
     <div class="buttons" id="main-buttons">
         <button class="btn-challenge" id="btn-challenge" onclick="doChallenge()">🎲 开始挑战</button>
         <button class="btn-bribe" id="btn-bribe" onclick="doBribe()">💰 贿赂</button>
+        <button class="btn-insurance" id="btn-insurance" onclick="buyInsurance()">🛡️ 买保险</button>
         <button class="btn-reset" id="btn-reset" onclick="resetProgress()">🔄 重置进度</button>
         <button class="btn-restart" onclick="restartGame()">🔁 重新开始</button>
         <button class="btn-exit" onclick="exitGame()">🚪 退出</button>
@@ -125,99 +138,129 @@
     <div id="continue-buttons" style="display:none; margin-top:10px;">
         <button class="btn-continue" onclick="continueGame()">继续挑战下一级</button>
     </div>
-    <div class="log" id="log">点击按钮开始游戏。可贿赂来暂时提高获胜概率。</div>
+    <div class="log" id="log">欢迎！可选择贿赂或购买保险来降低风险。</div>
 </div>
 
 <div class="right-panel">
     <h3>📋 玩法说明</h3>
     <ul>
-        <li>初始资金1000，每次挑战需支付成本。</li>
-        <li>获胜获得奖金，等级提升；失败扣除当前连胜奖金的1/4，等级归1。</li>
-        <li>主动重置进度（见好就收）会使后续成本上涨10%。</li>
-        <li>💰 贿赂：每300元提高1%获胜概率，最高50%，仅下次挑战有效。</li>
-        <li>🏆 打破历史最高资金可命名记录。</li>
+        <li>初始资金1000，每次挑战支付成本，获胜获得奖金并升级。</li>
+        <li>失败扣除当前连胜奖金的1/4，等级归1；主动重置（见好就收）让后续成本+10%。</li>
+        <li>💰 贿赂：每150元提升1%获胜概率，总概率上限70%。</li>
+        <li>🛡️ 保险：支付一半成本，失败时免受奖金扣除。</li>
+        <li>🔥 连胜≥3次时，每次获胜额外奖励20%奖金。</li>
+        <li>✨ 每次挑战后可能触发随机事件。</li>
+    </ul>
+    <h3>🏆 历史前三名</h3>
+    <ul class="record-list" id="top3-list">
+        <li>暂无记录</li>
     </ul>
 </div>
 
 <script>
-    // 游戏核心数据
+    // ============ 游戏核心数据 ============
     let money = 1000;
     let streakBonus = 0;
     let level = 1;
+    let winStreak = 0;
     let restartCount = 0;
     const costPenaltyRate = 0.1;
 
-    // 贿赂相关参数（调整后）
-    const BRIBE_COST_PER_PERCENT = 300;   // 每300元提升1%概率
-    const MAX_BRIBE_PROB = 0.50;          // 贿赂提升概率上限（50%）
+    const BRIBE_COST_PER_PERCENT = 150;
+    const MAX_TOTAL_PROB = 0.70;
     let bribeTotalSpent = 0;
+    let insuranceActive = false;
 
-    // 最高记录
-    let highestMoney = 1000;
-    let highestName = "无名";
+    // 历史前三名记录（保存在localStorage）
+    let topRecords = [];
 
     const levels = [
-        { cost: 80,  prob: 0.65, reward: 140 },
+        { cost: 80,  prob: 0.65, reward: 150 },
         { cost: 150, prob: 0.55, reward: 320 },
-        { cost: 300, prob: 0.4,  reward: 860 },
-        { cost: 600, prob: 0.25, reward: 3000 },
-        { cost: 1200,prob: 0.15, reward: 12000 }
+        { cost: 280, prob: 0.45, reward: 650 },
+        { cost: 500, prob: 0.35, reward: 1500 },
+        { cost: 1000,prob: 0.25, reward: 4200 }
     ];
     const maxLevel = levels.length;
 
-    // 加载最高记录
-    function loadHighScore() {
-        const saved = localStorage.getItem('gambling_highscore');
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                highestMoney = data.highest || 1000;
-                highestName = data.name || "无名";
-            } catch(e) {
-                highestMoney = 1000;
-                highestName = "无名";
-            }
-        }
-    }
-    function saveHighScore() {
-        localStorage.setItem('gambling_highscore', JSON.stringify({
-            highest: highestMoney,
-            name: highestName
-        }));
-    }
-    function updateHighScore() {
-        if (money > highestMoney) {
-            highestMoney = money;
-            let name = prompt("恭喜！你打破了历史最高资金记录！请为你的记录命名：", "无名玩家");
-            if (name === null || name.trim() === "") {
-                name = "无名玩家";
-            }
-            highestName = name.trim();
-            saveHighScore();
-        }
-        document.getElementById('highscore').textContent = highestMoney + ' (' + highestName + ')';
-    }
+    const LUCKY_EVENTS = [
+        { desc: "意外捡到100元！", effect: () => { money += 100; } },
+        { desc: "神秘人报销了本次挑战成本！", effect: () => { money += getEffectiveCost(levels[Math.min(level, maxLevel)-1].cost); } },
+        { desc: "财神眷顾，当前连胜奖金翻倍！", effect: () => { streakBonus *= 2; } },
+        { desc: "小福星降临，获得50元。", effect: () => { money += 50; } },
+    ];
 
-    // 计算实际成本
+    // ============ 辅助函数 ============
     function getEffectiveCost(original) {
         return Math.floor(original * (1 + restartCount * costPenaltyRate));
     }
 
-    // 计算实际获胜概率（含贿赂加成，上限50%）
     function getEffectiveProb(baseProb) {
-        let bonus = (bribeTotalSpent / BRIBE_COST_PER_PERCENT) * 0.01;  // 转化为概率值
-        return Math.min(baseProb + bonus, MAX_BRIBE_PROB);
+        let bonus = (bribeTotalSpent / BRIBE_COST_PER_PERCENT) * 0.01;
+        return Math.min(baseProb + bonus, MAX_TOTAL_PROB);
     }
 
-    // 更新界面
+    function loadTopRecords() {
+        const saved = localStorage.getItem('gambling_top3');
+        if (saved) {
+            try {
+                topRecords = JSON.parse(saved);
+            } catch(e) {
+                topRecords = [];
+            }
+        }
+    }
+
+    function saveTopRecords() {
+        localStorage.setItem('gambling_top3', JSON.stringify(topRecords));
+    }
+
+    function updateTopRecords(newMoney, newName) {
+        // 插入新记录
+        topRecords.push({ money: newMoney, name: newName });
+        // 按资金降序排序
+        topRecords.sort((a, b) => b.money - a.money);
+        // 只保留前3名
+        topRecords = topRecords.slice(0, 3);
+        saveTopRecords();
+        renderTopRecords();
+    }
+
+    function renderTopRecords() {
+        const list = document.getElementById('top3-list');
+        if (!topRecords || topRecords.length === 0) {
+            list.innerHTML = '<li>暂无记录</li>';
+            return;
+        }
+        list.innerHTML = topRecords.map((r, i) => 
+            `<li>🥇🥈🥉`.charAt(i) + ` ${r.money} (${r.name})</li>`
+        ).join('');
+    }
+
+    function checkAndUpdateRecords() {
+        // 检查当前资金是否进入前三名
+        if (money <= 0) return;
+        // 如果前三名未满3人，或者当前资金高于第三名，则弹出命名
+        if (topRecords.length < 3 || money > topRecords[topRecords.length-1].money) {
+            let name = prompt("恭喜！你进入了历史前三名！请为你的记录命名：", "无名玩家");
+            if (name === null || name.trim() === "") name = "无名玩家";
+            name = name.trim();
+            updateTopRecords(money, name);
+        }
+    }
+
+    function log(msg) {
+        document.getElementById('log').textContent = msg;
+    }
+
     function updateUI() {
         document.getElementById('money').textContent = money;
         document.getElementById('streakBonus').textContent = streakBonus;
         document.getElementById('level').textContent = level;
+        document.getElementById('winStreak').textContent = winStreak;
         document.getElementById('restart').textContent = restartCount;
         let mult = (1 + restartCount * costPenaltyRate).toFixed(1);
         document.getElementById('multiplier').textContent = mult + 'x';
-        updateHighScore();
 
         const info = levels[level-1];
         if (level <= maxLevel) {
@@ -228,89 +271,92 @@
             let effectiveProb = getEffectiveProb(baseProb);
             document.getElementById('prob').textContent = (effectiveProb*100).toFixed(1) + '%';
             if (bribeTotalSpent > 0) {
-                document.getElementById('prob').textContent += ' (原' + (baseProb*100).toFixed(1) + '%)';
-                let bonusProb = effectiveProb - baseProb;
-                document.getElementById('bribeProb').textContent = '+' + (bonusProb*100).toFixed(1) + '%';
+                document.getElementById('prob').textContent += ' (基础' + (baseProb*100).toFixed(1) + '%)';
+                document.getElementById('bribeProb').textContent = '+' + ((effectiveProb - baseProb)*100).toFixed(1) + '%';
                 document.getElementById('bribeRow').style.display = 'flex';
             } else {
                 document.getElementById('bribeRow').style.display = 'none';
             }
+            document.getElementById('insuranceRow').style.display = insuranceActive ? 'flex' : 'none';
         } else {
             document.getElementById('cost').textContent = '--';
             document.getElementById('prob').textContent = '--';
             document.getElementById('reward').textContent = '--';
             document.getElementById('bribeRow').style.display = 'none';
+            document.getElementById('insuranceRow').style.display = 'none';
         }
 
         const canAfford = level <= maxLevel && money >= getEffectiveCost(levels[level-1].cost);
         document.getElementById('btn-challenge').disabled = !canAfford;
         if (!canAfford && level <= maxLevel) {
-            document.getElementById('log').textContent = `资金不足！当前挑战成本为 ${getEffectiveCost(levels[level-1].cost)}，无法继续。`;
+            log(`资金不足！当前挑战成本为 ${getEffectiveCost(levels[level-1].cost)}，无法继续。`);
         }
     }
 
-    function log(msg) {
-        document.getElementById('log').textContent = msg;
-    }
-
-    // 贿赂操作
+    // ============ 核心操作 ============
     function doBribe() {
-        if (level > maxLevel) {
-            log("已经没有挑战了，无需贿赂。");
-            return;
-        }
-        let input = prompt("输入贿赂金额（每300元提高1%获胜概率，最高50%）：", "");
+        if (level > maxLevel) { log("没有挑战可贿赂。"); return; }
+        let input = prompt("输入贿赂金额（每150元提高1%概率，总概率上限70%）：", "");
         if (input === null) return;
         let amount = parseInt(input, 10);
-        if (isNaN(amount) || amount <= 0) {
-            alert("请输入有效的正整数金额。");
-            return;
-        }
-        if (amount > money) {
-            alert("资金不足！");
-            return;
-        }
+        if (isNaN(amount) || amount <= 0) { alert("请输入有效的正整数金额。"); return; }
+        if (amount > money) { alert("资金不足！"); return; }
         let baseProb = levels[level-1].prob;
         let currentProb = getEffectiveProb(baseProb);
-        if (currentProb >= MAX_BRIBE_PROB) {
-            alert("获胜概率已达到上限50%，无法继续贿赂。");
-            return;
-        }
+        if (currentProb >= MAX_TOTAL_PROB) { alert("总概率已达到70%上限，无法继续贿赂。"); return; }
         money -= amount;
         bribeTotalSpent += amount;
         let newProb = getEffectiveProb(baseProb);
-        log(`贿赂成功！花费 ${amount} 元，当前获胜概率提升至 ${(newProb*100).toFixed(1)}% (已花费 ${bribeTotalSpent} 元)`);
+        log(`贿赂成功！花费 ${amount} 元，当前获胜概率 ${(newProb*100).toFixed(1)}% (已花费 ${bribeTotalSpent} 元)`);
         updateUI();
     }
 
-    // 挑战
+    function buyInsurance() {
+        if (level > maxLevel) { log("没有挑战可购买保险。"); return; }
+        if (insuranceActive) { alert("已经购买过保险，请先挑战。"); return; }
+        const cost = getEffectiveCost(levels[level-1].cost);
+        const insurancePrice = Math.floor(cost / 2);
+        if (money < insurancePrice) { alert("资金不足，无法购买保险。"); return; }
+        money -= insurancePrice;
+        insuranceActive = true;
+        log(`已购买保险（花费 ${insurancePrice} 元），本次挑战若失败将不扣除连胜奖金。`);
+        updateUI();
+    }
+
     function doChallenge() {
-        if (level > maxLevel) {
-            log("没有更高的挑战了！");
-            return;
-        }
+        if (level > maxLevel) { log("没有更高的挑战了！"); return; }
         const lv = levels[level-1];
         const cost = getEffectiveCost(lv.cost);
-        if (money < cost) {
-            log("资金不足！");
-            return;
-        }
+        if (money < cost) { log("资金不足！"); return; }
         money -= cost;
         let effectiveProb = getEffectiveProb(lv.prob);
-        let msg = `支付成本 ${cost}，当前获胜概率 ${(effectiveProb*100).toFixed(1)}%，开始抽奖...\n`;
+        let msg = `支付成本 ${cost}，概率 ${(effectiveProb*100).toFixed(1)}%，抽奖中...\n`;
 
-        // 挑战结束，贿赂立即失效
+        const hadInsurance = insuranceActive;
         bribeTotalSpent = 0;
+        insuranceActive = false;
 
         if (Math.random() < effectiveProb) {
             // 获胜
-            money += lv.reward;
-            streakBonus += lv.reward;
-            level++;
-            msg += `恭喜！赢得了 ${lv.reward} 奖金！`;
-            if (level > maxLevel) {
-                msg += " 你已通关所有等级！";
+            let reward = lv.reward;
+            winStreak++;
+            if (winStreak >= 3) {
+                let bonus = Math.floor(reward * 0.2);
+                reward += bonus;
+                msg += `连胜${winStreak}次！额外奖励 ${bonus}，`;
             }
+            money += reward;
+            streakBonus += reward;
+            level++;
+            msg += `赢得 ${reward} 奖金！`;
+
+            if (Math.random() < 0.3) {
+                const event = LUCKY_EVENTS[Math.floor(Math.random() * LUCKY_EVENTS.length)];
+                event.effect();
+                msg += ` 随机事件：${event.desc}`;
+            }
+
+            if (level > maxLevel) msg += " 恭喜通关！";
             updateUI();
             log(msg);
             if (level > maxLevel) {
@@ -318,30 +364,31 @@
                 document.getElementById('continue-buttons').style.display = 'none';
                 streakBonus = 0;
                 updateUI();
+                checkAndUpdateRecords();
             } else {
                 document.getElementById('continue-buttons').style.display = 'block';
             }
         } else {
             // 失败
-            msg += "很遗憾，挑战失败。\n";
-            if (streakBonus > 0) {
+            msg += "挑战失败。";
+            if (!hadInsurance && streakBonus > 0) {
                 let quarter = Math.floor(streakBonus / 4);
                 if (quarter > 0) {
                     money = Math.max(0, money - quarter);
                     streakBonus -= quarter;
-                    msg += `扣除当前连胜奖金的四分之一（${quarter}），剩余连胜奖金 ${streakBonus}`;
-                } else {
-                    msg += "连胜奖金太少，无需扣除。";
+                    msg += ` 扣除连胜奖金1/4（${quarter}），剩余${streakBonus}`;
                 }
-            } else {
-                msg += "当前没有连胜奖金，无扣除。";
+            } else if (hadInsurance) {
+                msg += " 保险生效，未扣除连胜奖金！";
             }
+            winStreak = 0;
             level = 1;
             streakBonus = 0;
-            msg += "\n进度已退回初始等级。";
+            msg += " 进度重置。";
             updateUI();
             log(msg);
             document.getElementById('continue-buttons').style.display = 'none';
+            checkAndUpdateRecords();
         }
     }
 
@@ -350,27 +397,31 @@
         doChallenge();
     }
 
-    // 主动重置（见好就收）
     function resetProgress() {
         level = 1;
         restartCount++;
+        winStreak = 0;
         streakBonus = 0;
         bribeTotalSpent = 0;
+        insuranceActive = false;
         let mult = (1 + restartCount * costPenaltyRate).toFixed(1);
-        log(`进度已重置为第1级。主动重置次数：${restartCount}，成本倍率：${mult}x，当前连胜奖金已清零。`);
+        log(`进度重置为第1级。重置次数：${restartCount}，成本倍率：${mult}x，连胜清空。`);
         updateUI();
         document.getElementById('continue-buttons').style.display = 'none';
+        checkAndUpdateRecords();
     }
 
-    // 重新开始
     function restartGame() {
+        // 完全重置游戏，但保留前三名记录
         money = 1000;
         streakBonus = 0;
         level = 1;
+        winStreak = 0;
         restartCount = 0;
         bribeTotalSpent = 0;
+        insuranceActive = false;
         updateUI();
-        log("游戏已重新开始，所有进度、成本惩罚与贿赂已重置。");
+        log("游戏已重新开始，所有状态已重置。");
         document.getElementById('continue-buttons').style.display = 'none';
         document.getElementById('btn-challenge').disabled = false;
     }
@@ -379,13 +430,16 @@
         alert(`游戏结束！最终资金：${money}`);
         document.getElementById('btn-challenge').disabled = true;
         document.getElementById('btn-bribe').disabled = true;
+        document.getElementById('btn-insurance').disabled = true;
         document.getElementById('btn-reset').disabled = true;
         document.getElementById('continue-buttons').style.display = 'none';
         log("游戏已退出，刷新页面重新开始。");
+        checkAndUpdateRecords();
     }
 
     // 初始化
-    loadHighScore();
+    loadTopRecords();
+    renderTopRecords();
     updateUI();
 </script>
 </body>
