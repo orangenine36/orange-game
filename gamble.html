@@ -1,521 +1,407 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>ORANGE-GAME</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            overflow: hidden;
-        }
-        .left-panel {
-            flex: 3;
-            display: flex;
-            flex-direction: column;
-            padding: 2vh 2vw;
-            min-width: 0;
-        }
-        .right-panel {
-            flex: 1;
-            background: #16213e;
-            padding: 2vh 1.5vw;
-            display: flex;
-            flex-direction: column;
-            gap: 2vh;
-            font-size: clamp(12px, 1.5vw, 16px);
-            overflow-y: auto;
-            border-left: 2px solid #0f3460;
-        }
-        .game-title {
-            text-align: center;
-            font-size: clamp(28px, 5vw, 52px);
-            font-weight: bold;
-            color: #e67e22;
-            text-shadow: 0 0 15px rgba(230,126,34,0.5);
-            margin-bottom: 1.5vh;
-        }
-        .card {
-            background: #16213e;
-            border-radius: 16px;
-            padding: 2vh 2vw;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            margin-bottom: 1.5vh;
-            border: 1px solid #0f3460;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5vh 2vw;
-        }
-        .stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.8vh 0;
-            border-bottom: 1px solid #0f3460;
-        }
-        .stat .label { color: #a0a0b0; font-size: clamp(14px, 1.8vw, 18px); }
-        .stat .value { font-weight: bold; font-size: clamp(14px, 1.8vw, 18px); }
-        .warning { color: #e67e22; }
-        .highlight { color: #3498db; }
-        .bribe-info { color: #f1c40f; }
-        .streak-highlight { color: #e74c3c; font-weight: bold; }
-        .buttons {
-            display: flex;
-            gap: 1.5vw;
-            margin-top: 1.5vh;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        button {
-            padding: 1.2vh 2vw;
-            font-size: clamp(14px, 1.8vw, 20px);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.1s, filter 0.2s;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        button:hover { filter: brightness(1.1); transform: scale(1.02); }
-        button:active { transform: scale(0.97); }
-        .btn-challenge { background: #27ae60; color: white; }
-        .btn-challenge:disabled { background: #555; cursor: not-allowed; }
-        .btn-bribe { background: #f39c12; color: white; }
-        .btn-insurance { background: #16a085; color: white; }
-        .btn-reset { background: #3498db; color: white; }
-        .btn-restart { background: #8e44ad; color: white; }
-        .btn-exit { background: #e74c3c; color: white; }
-        .btn-continue { background: #2980b9; color: white; }
-        .log {
-            background: #0f3460;
-            border: 1px solid #1a1a4e;
-            padding: 1.5vh 2vw;
-            min-height: 8vh;
-            border-radius: 12px;
-            margin-top: 1.5vh;
-            font-size: clamp(14px, 1.8vw, 18px);
-            color: #ddd;
-        }
-        .right-panel h3 {
-            color: #e67e22;
-            font-size: clamp(18px, 2.5vw, 22px);
-            border-bottom: 2px solid #e67e22;
-            padding-bottom: 0.8vh;
-            margin-bottom: 1vh;
-        }
-        .right-panel ul, .record-list {
-            list-style: none;
-            padding: 0;
-            margin: 1vh 0;
-        }
-        .right-panel li {
-            padding: 0.6vh 0;
-            border-bottom: 1px dashed #2a2a5a;
-            font-size: clamp(12px, 1.5vw, 16px);
-        }
-        .record-list li {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: clamp(14px, 1.8vw, 18px);
-        }
-        #continue-buttons {
-            display: flex;
-            justify-content: center;
-            margin-top: 1vh;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
+  <title>ORANGE-GAME · 连胜挑战</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f0f1a;
+      font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .game-container {
+      max-width: 1100px;
+      width: 100%;
+      background: rgba(22, 27, 44, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 36px;
+      box-shadow: 0 25px 50px -10px rgba(0,0,0,0.8);
+      display: flex;
+      flex-wrap: wrap;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .left-panel {
+      flex: 2.2;
+      min-width: 320px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .right-panel {
+      flex: 1;
+      min-width: 240px;
+      background: rgba(12, 15, 24, 0.7);
+      backdrop-filter: blur(4px);
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+    .game-title {
+      font-size: 3.2rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #ff8c42;
+      text-shadow: 0 0 20px rgba(255,140,66,0.5);
+      text-align: center;
+      margin-bottom: 0.3rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.8rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 24px;
+      padding: 1.2rem;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #b0b0c0;
+      font-weight: 500;
+      border-bottom: 1px dashed rgba(255,255,255,0.08);
+      padding: 0.5rem 0;
+    }
+    .stat-value {
+      font-weight: 700;
+      color: #f0f0f0;
+      text-shadow: 0 0 6px rgba(255,255,255,0.2);
+    }
+    .warning { color: #ff8c42; }
+    .bribe-highlight { color: #fbbf24; }
+    .streak-highlight { color: #ef4444; }
+    .insurance-color { color: #2dd4bf; }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    button {
+      background: #2a2f4b;
+      border: none;
+      color: #e0e0ff;
+      font-weight: 600;
+      padding: 0.8rem 1.5rem;
+      border-radius: 40px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    button:hover {
+      background: #3d4370;
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+    .btn-challenge { background: #16a34a; color: white; }
+    .btn-challenge:disabled { background: #555; cursor: not-allowed; }
+    .btn-bribe { background: #d97706; }
+    .btn-insurance { background: #0d9488; }
+    .btn-reset { background: #2563eb; }
+    .btn-restart { background: #7c3aed; }
+    .btn-exit { background: #b91c1c; }
+    .btn-continue { background: #0891b2; }
+
+    .log-area {
+      background: #0b0e17;
+      border-radius: 18px;
+      padding: 1rem 1.4rem;
+      color: #b9c2d4;
+      min-height: 70px;
+      border: 1px solid #2d3548;
+      font-weight: 500;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    .rules-box h3, .hall-title {
+      color: #ff8c42;
+      margin-bottom: 12px;
+      font-size: 1.4rem;
+      border-left: 4px solid #ff8c42;
+      padding-left: 12px;
+    }
+    .rules-list li {
+      margin-bottom: 10px;
+      color: #aaa;
+      line-height: 1.4;
+      font-size: 0.9rem;
+    }
+    .record-list { list-style: none; }
+    .record-list li {
+      background: rgba(255,255,255,0.05);
+      margin: 8px 0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      color: #ddd;
+    }
+    .footer-note {
+      margin-top: auto;
+      color: #5b5b6b;
+      font-size: 0.8rem;
+    }
+    @media (max-width: 750px) {
+      .game-container { flex-direction: column; }
+      .right-panel { border-left: none; border-top: 1px solid rgba(255,255,255,0.1); }
+    }
+  </style>
 </head>
 <body>
-<div class="left-panel">
+<div class="game-container">
+  <div class="left-panel">
     <div class="game-title">🍊 ORANGE-GAME</div>
-    <div class="card">
-        <div class="stats-grid">
-            <div class="stat"><span class="label">💰 当前资金</span><span class="value" id="money">1000</span></div>
-            <div class="stat"><span class="label">🎯 当前等级</span><span class="value" id="level">1</span></div>
-            <div class="stat"><span class="label">🔥 连胜次数</span><span class="value streak-highlight" id="winStreak">0</span></div>
-            <div class="stat"><span class="label">💎 连胜奖金</span><span class="value" id="streakBonus">0</span></div>
-            <div class="stat"><span class="label">📈 挑战成本</span><span class="value" id="cost">-</span></div>
-            <div class="stat"><span class="label">🎲 获胜概率</span><span class="value" id="prob">-</span></div>
-            <div class="stat" id="bribeRow" style="display:none;"><span class="label bribe-info">💰 贿赂提升</span><span class="value bribe-info" id="bribeProb">-</span></div>
-            <div class="stat" id="insuranceRow" style="display:none;"><span class="label" style="color:#16a085;">🛡️ 保险状态</span><span class="value" style="color:#16a085;">已购买</span></div>
-            <div class="stat"><span class="label">🏅 获胜奖金</span><span class="value" id="reward">-</span></div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:1.5vh;">
-            <div class="stat" style="border:none;"><span class="label">🔄 重置次数</span><span class="value warning" id="restart">0</span></div>
-            <div class="stat" style="border:none;"><span class="label">📊 成本倍率</span><span class="value warning" id="multiplier">1.00x</span></div>
-        </div>
+    <div class="stats-grid" id="stats-container"></div>
+    <div class="button-group">
+      <button class="btn-challenge" id="btn-challenge">🎲 挑战</button>
+      <button class="btn-bribe" id="btn-bribe">💰 贿赂</button>
+      <button class="btn-insurance" id="btn-insurance">🛡️ 保险</button>
+      <button class="btn-reset" id="btn-reset">🔄 重置</button>
+      <button class="btn-restart" id="btn-restart">🔁 重开</button>
+      <button class="btn-exit" id="btn-exit">🚪 退出</button>
     </div>
-    <div class="buttons" id="main-buttons">
-        <button class="btn-challenge" id="btn-challenge" onclick="doChallenge()">🎲 挑战</button>
-        <button class="btn-bribe" id="btn-bribe" onclick="doBribe()">💰 贿赂</button>
-        <button class="btn-insurance" id="btn-insurance" onclick="buyInsurance()">🛡️ 保险</button>
-        <button class="btn-reset" id="btn-reset" onclick="resetProgress()">🔄 重置</button>
-        <button class="btn-restart" onclick="restartGame()">🔁 重开</button>
-        <button class="btn-exit" onclick="exitGame()">🚪 退出</button>
+    <div id="continue-area" style="display: flex; justify-content: center; margin-top: 8px;"></div>
+    <div class="log-area" id="log">🍊 欢迎！用策略和运气征服赌局。</div>
+  </div>
+  <div class="right-panel">
+    <div class="rules-box">
+      <h3>📜 玩法规则</h3>
+      <ul class="rules-list">
+        <li>💰 初始资金 <b>1000</b>，每次挑战支付成本。</li>
+        <li>🎯 获胜得奖金并升级，失败扣连胜奖金 <b>1/3</b> 并归1级。</li>
+        <li>🔄 主动重置：首次+5%，之后每次+3%，逐次递增。</li>
+        <li>💸 贿赂提升概率，<b>前期便宜后期贵</b>，上限<b>70%</b>。</li>
+        <li>🛡️ 保险：支付50%成本，免扣奖金。</li>
+        <li>🔥 连胜≥3次额外+20%奖金。</li>
+        <li>✨ 丰富随机事件 (30%触发)。</li>
+      </ul>
     </div>
-    <div id="continue-buttons" style="display:none;">
-        <button class="btn-continue" onclick="continueGame()">继续挑战下一级 ▶</button>
+    <div>
+      <h3 class="hall-title">🏆 个人名人堂</h3>
+      <ul class="record-list" id="top3-list"><li>暂无记录</li></ul>
     </div>
-    <div class="log" id="log">🌟 欢迎！全球玩家共享排名，你能上榜吗？</div>
+    <div class="footer-note">8级挑战 · 通关率约3%</div>
+  </div>
 </div>
-
-<div class="right-panel">
-    <h3>📜 规则</h3>
-    <ul>
-        <li>初始资金 1000，挑战需支付成本。</li>
-        <li>获胜：赢得奖金，升级；失败：扣除当前连胜奖金的 <b>1/3</b>，等级归 1。</li>
-        <li>主动重置（见好就收）会使后续成本 <b>+12%</b>。</li>
-        <li>💰 贿赂：每 150 元提升 1% 概率，上限 <b>65%</b>。</li>
-        <li>🛡️ 保险：支付 50% 成本，失败免受奖金扣除。</li>
-        <li>🔥 连胜 ≥3 次，额外奖励 20% 奖金。</li>
-        <li>✨ 每次挑战 30% 概率触发随机事件。</li>
-        <li>🌍 历史前三名全球共享（通过 GitHub Issue）。</li>
-    </ul>
-    <h3>🏆 名人堂</h3>
-    <ul class="record-list" id="top3-list">
-        <li>加载中...</li>
-    </ul>
-    <div style="margin-top:auto; font-size:clamp(10px,1.2vw,14px); color:#555;">
-        8 级挑战 · 前期友好 · 后期地狱
-    </div>
-</div>
-
 <script>
-    // ============ ⚠️ 只修改下面这行 ⚠️ ============
-    const TOKEN = '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';
-    // =============================================
-
-    const OWNER = 'orange36';
-    const REPO = 'orange-game';
-    const ISSUE_NUMBER = 1;
-    const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/issues/${ISSUE_NUMBER}`;
-
-    // ============ 游戏核心数据 ============
+  (function() {
+    // ============ 游戏状态 ============
     let money = 1000;
     let streakBonus = 0;
     let level = 1;
     let winStreak = 0;
     let restartCount = 0;
-    const costPenaltyRate = 0.12;
-
-    const BRIBE_COST_PER_PERCENT = 150;
-    const MAX_TOTAL_PROB = 0.65;
-    let bribeTotalSpent = 0;
-    let insuranceActive = false;
-
+    let bribeSpent = 0;
+    let insured = false;
     let topRecords = [];
 
+    // 重置成本累进：首次+5%，之后每次+3%
+    function getCostPenalty() {
+      if (restartCount === 0) return 0;
+      return 0.05 + (restartCount - 1) * 0.03;
+    }
+
     const levels = [
-        { cost: 60,  prob: 0.75, reward: 90 },
-        { cost: 120, prob: 0.65, reward: 220 },
-        { cost: 200, prob: 0.55, reward: 400 },
-        { cost: 350, prob: 0.40, reward: 850 },
-        { cost: 600, prob: 0.28, reward: 1800 },
-        { cost: 1000,prob: 0.18, reward: 4000 },
-        { cost: 1800,prob: 0.08, reward: 15000 },
-        { cost: 3000,prob: 0.03, reward: 80000 }
+      { cost: 60,  prob: 0.75, reward: 90 },
+      { cost: 120, prob: 0.60, reward: 220 },
+      { cost: 200, prob: 0.45, reward: 450 },
+      { cost: 350, prob: 0.30, reward: 1000 },
+      { cost: 600, prob: 0.18, reward: 2800 },
+      { cost: 1000,prob: 0.10, reward: 8000 },
+      { cost: 1800,prob: 0.05, reward: 25000 },
+      { cost: 3000,prob: 0.02, reward: 100000 }
     ];
-    const maxLevel = levels.length;
+    const MAX_LEVEL = levels.length;
+
+    function getBribeCostPerPercent() {
+      return Math.floor(120 + (level - 1) * 35);
+    }
+    const MAX_PROB = 0.70;
 
     const EVENTS = [
-        { desc: "捡到120元！", effect: () => { money += 120; } },
-        { desc: "报销本次成本！", effect: () => { money += getEffectiveCost(levels[Math.min(level, maxLevel)-1].cost); } },
-        { desc: "连胜奖金翻倍！", effect: () => { streakBonus = Math.floor(streakBonus * 2); } },
-        { desc: "小偷光顾，损失100元。", effect: () => { money = Math.max(0, money - 100); } },
-        { desc: "市场波动，扣除连胜奖金10%。", effect: () => { let loss = Math.floor(streakBonus * 0.1); money = Math.max(0, money - loss); streakBonus -= loss; } },
+      { desc: "🍀 捡到150元", effect: ()=> { money += 150; } },
+      { desc: "💼 报销本次成本", effect: ()=> { money += getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost); } },
+      { desc: "📈 连胜奖金翻倍", effect: ()=> { streakBonus = Math.floor(streakBonus * 2); } },
+      { desc: "💸 小偷偷走100元", effect: ()=> { money = Math.max(0, money - 100); } },
+      { desc: "📉 扣除10%连胜奖金", effect: ()=> { let loss = Math.floor(streakBonus * 0.1); money = Math.max(0, money - loss); streakBonus -= loss; } },
+      { desc: "🎁 奖金增加80元", effect: ()=> { money += 80; } },
+      { desc: "🧧 获得当前等级成本一半", effect: ()=> { money += Math.floor(getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost)/2); } },
+      { desc: "⚡ 报销本次成本", effect: ()=> { money += getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost); } },
+      { desc: "🛡️ 获得临时护盾(无效果)", effect: ()=> {} }
     ];
 
-    // ============ GitHub Issue API 函数 ============
-    async function readTopRecords() {
-        try {
-            const response = await fetch(API_URL, {
-                headers: {
-                    'Authorization': `token ${TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            if (!response.ok) throw new Error('读取失败');
-            const issue = await response.json();
-            const match = issue.body.match(/```json\n([\s\S]*?)\n```/);
-            if (match && match[1]) {
-                topRecords = JSON.parse(match[1]);
-            } else {
-                topRecords = JSON.parse(issue.body);
-            }
-        } catch(e) {
-            console.error('读取排名失败:', e);
-            topRecords = [];
-        }
-        renderTopRecords();
-    }
-
-    async function writeTopRecords() {
-        try {
-            const body = '```json\n' + JSON.stringify(topRecords, null, 2) + '\n```';
-            await fetch(API_URL, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `token ${TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ body: body })
-            });
-            console.log('✅ 排名已同步');
-        } catch(e) {
-            console.error('保存排名失败:', e);
-        }
-    }
-
-    function loadTopRecords() {
-        readTopRecords();
-    }
-
-    function saveTopRecords() {
-        writeTopRecords();
-    }
-
-    async function updateTopRecords(newMoney, newName) {
-        await readTopRecords();
-        topRecords.push({ money: newMoney, name: newName });
-        topRecords.sort((a, b) => b.money - a.money);
-        topRecords = topRecords.slice(0, 3);
-        await writeTopRecords();
-        renderTopRecords();
-    }
-
-    function renderTopRecords() {
-        const list = document.getElementById('top3-list');
-        if (!topRecords || topRecords.length === 0) {
-            list.innerHTML = '<li>暂无记录</li>';
-            return;
-        }
-        const medals = ['🥇', '🥈', '🥉'];
-        list.innerHTML = topRecords.map((r, i) => 
-            `<li>${medals[i]} ${r.money} (${r.name})</li>`
-        ).join('');
-    }
-
-    function checkAndUpdateRecords() {
-        if (money <= 0) return;
-        if (topRecords.length < 3 || money > topRecords[topRecords.length-1].money) {
-            let name = prompt("🎉 恭喜进入全球前三！请为你的记录命名：", "传奇赌徒");
-            if (name === null || name.trim() === "") name = "传奇赌徒";
-            name = name.trim();
-            updateTopRecords(money, name);
-        }
-    }
-
-    // ============ 辅助函数 ============
-    function getEffectiveCost(original) {
-        return Math.floor(original * (1 + restartCount * costPenaltyRate));
-    }
-
-    function getEffectiveProb(baseProb) {
-        let bonus = (bribeTotalSpent / BRIBE_COST_PER_PERCENT) * 0.01;
-        return Math.min(baseProb + bonus, MAX_TOTAL_PROB);
-    }
-
-    function log(msg) {
-        document.getElementById('log').textContent = msg;
+    function getEffectiveCost(base) { return Math.floor(base * (1 + getCostPenalty())); }
+    function getCurrentProb() {
+      let base = levels[level-1].prob;
+      let bonus = (bribeSpent / getBribeCostPerPercent()) * 0.01;
+      return Math.min(base + bonus, MAX_PROB);
     }
 
     function updateUI() {
-        document.getElementById('money').textContent = money;
-        document.getElementById('streakBonus').textContent = streakBonus;
-        document.getElementById('level').textContent = level;
-        document.getElementById('winStreak').textContent = winStreak;
-        document.getElementById('restart').textContent = restartCount;
-        let mult = (1 + restartCount * costPenaltyRate).toFixed(2);
-        document.getElementById('multiplier').textContent = mult + 'x';
-
-        const info = levels[level-1];
-        if (level <= maxLevel) {
-            document.getElementById('cost').textContent = getEffectiveCost(info.cost);
-            document.getElementById('reward').textContent = info.reward;
-
-            let baseProb = info.prob;
-            let effectiveProb = getEffectiveProb(baseProb);
-            document.getElementById('prob').textContent = (effectiveProb*100).toFixed(1) + '%';
-            if (bribeTotalSpent > 0) {
-                document.getElementById('prob').textContent += ' (基础' + (baseProb*100).toFixed(1) + '%)';
-                document.getElementById('bribeProb').textContent = '+' + ((effectiveProb - baseProb)*100).toFixed(1) + '%';
-                document.getElementById('bribeRow').style.display = 'flex';
-            } else {
-                document.getElementById('bribeRow').style.display = 'none';
-            }
-            document.getElementById('insuranceRow').style.display = insuranceActive ? 'flex' : 'none';
-        } else {
-            document.getElementById('cost').textContent = '--';
-            document.getElementById('prob').textContent = '--';
-            document.getElementById('reward').textContent = '--';
-            document.getElementById('bribeRow').style.display = 'none';
-            document.getElementById('insuranceRow').style.display = 'none';
-        }
-
-        const canAfford = level <= maxLevel && money >= getEffectiveCost(levels[level-1].cost);
-        document.getElementById('btn-challenge').disabled = !canAfford;
-        if (!canAfford && level <= maxLevel) {
-            log(`❌ 资金不足！当前成本 ${getEffectiveCost(levels[level-1].cost)}，无法挑战。`);
-        }
+      const container = document.getElementById('stats-container');
+      const lv = levels[level-1];
+      const cost = (level <= MAX_LEVEL) ? getEffectiveCost(lv.cost) : '--';
+      const prob = (level <= MAX_LEVEL) ? (getCurrentProb()*100).toFixed(1)+'%' : '--';
+      const reward = (level <= MAX_LEVEL) ? lv.reward : '--';
+      let bribeRow = '';
+      if (level <= MAX_LEVEL && bribeSpent > 0) {
+        let bonus = ((getCurrentProb() - lv.prob)*100).toFixed(1);
+        bribeRow = `<div class="stat-item"><span>💰 贿赂提升</span><span class="stat-value bribe-highlight">+${bonus}%</span></div>`;
+      }
+      const insuranceRow = insured ? `<div class="stat-item"><span>🛡️ 保险</span><span class="stat-value insurance-color">已激活</span></div>` : '';
+      const penalty = getCostPenalty();
+      container.innerHTML = `
+        <div class="stat-item"><span>💵 资金</span><span class="stat-value">${money}</span></div>
+        <div class="stat-item"><span>🎯 等级</span><span class="stat-value">${level}</span></div>
+        <div class="stat-item"><span>🔥 连胜</span><span class="stat-value streak-highlight">${winStreak}</span></div>
+        <div class="stat-item"><span>💎 连胜奖金</span><span class="stat-value">${streakBonus}</span></div>
+        <div class="stat-item"><span>📈 成本</span><span class="stat-value">${cost}</span></div>
+        <div class="stat-item"><span>🎲 概率</span><span class="stat-value">${prob}</span></div>
+        ${bribeRow}
+        ${insuranceRow}
+        <div class="stat-item"><span>🏅 奖金</span><span class="stat-value">${reward}</span></div>
+        <div class="stat-item"><span>🔄 重置次数</span><span class="stat-value warning">${restartCount}</span></div>
+        <div class="stat-item"><span>📊 成本倍率</span><span class="stat-value warning">${(1+penalty).toFixed(2)}x</span></div>
+      `;
+      document.getElementById('btn-challenge').disabled = (level > MAX_LEVEL || money < getEffectiveCost(levels[level-1]?.cost || Infinity));
     }
 
-    // ============ 核心操作 ============
+    function log(msg) { document.getElementById('log').textContent = msg; }
+
+    function loadRecords() {
+      try { topRecords = JSON.parse(localStorage.getItem('orange_top3')) || []; } catch { topRecords = []; }
+      renderRecords();
+    }
+    function saveRecords() { localStorage.setItem('orange_top3', JSON.stringify(topRecords)); }
+    function updateRecords(newMoney, newName) {
+      let existing = topRecords.find(r => r.name === newName);
+      if (existing) { if (newMoney > existing.money) existing.money = newMoney; }
+      else topRecords.push({ money: newMoney, name: newName });
+      topRecords.sort((a,b)=>b.money-a.money);
+      topRecords = topRecords.slice(0,3);
+      saveRecords();
+      renderRecords();
+    }
+    function renderRecords() {
+      const list = document.getElementById('top3-list');
+      if (!topRecords.length) { list.innerHTML = '<li>暂无记录</li>'; return; }
+      list.innerHTML = topRecords.map((r,i)=>`<li>${['🥇','🥈','🥉'][i]} ${r.money} (${r.name})</li>`).join('');
+    }
+    function checkRecord() {
+      if (money <= 0) return;
+      if (topRecords.length < 3 || money > (topRecords[topRecords.length-1]?.money||0)) {
+        let name = prompt("🎉 进入个人前三！留下名字:", "挑战者");
+        if (name) updateRecords(money, name.trim() || "匿名");
+      }
+    }
+
     function doBribe() {
-        if (level > maxLevel) { log("没有挑战可贿赂。"); return; }
-        let input = prompt("输入贿赂金额（每150元提升1%概率，上限65%）：", "");
-        if (input === null) return;
-        let amount = parseInt(input, 10);
-        if (isNaN(amount) || amount <= 0) { alert("请输入有效的正整数金额。"); return; }
-        if (amount > money) { alert("资金不足！"); return; }
-        let baseProb = levels[level-1].prob;
-        let currentProb = getEffectiveProb(baseProb);
-        if (currentProb >= MAX_TOTAL_PROB) { alert("概率已达65%上限。"); return; }
-        money -= amount;
-        bribeTotalSpent += amount;
-        let newProb = getEffectiveProb(baseProb);
-        log(`💰 贿赂成功！花费 ${amount}，概率提升至 ${(newProb*100).toFixed(1)}%`);
-        updateUI();
+      if (level > MAX_LEVEL) return;
+      let costPer = getBribeCostPerPercent();
+      let input = prompt(`贿赂金额(每${costPer}元+1%概率，上限70%):`, '');
+      if (!input) return;
+      let amt = parseInt(input);
+      if (isNaN(amt) || amt<=0) return;
+      if (amt > money) { alert('资金不足'); return; }
+      if (getCurrentProb() >= MAX_PROB) { alert('已达上限'); return; }
+      money -= amt;
+      bribeSpent += amt;
+      log(`💰 贿赂${amt}元，当前概率${(getCurrentProb()*100).toFixed(1)}%`);
+      updateUI();
     }
-
     function buyInsurance() {
-        if (level > maxLevel) { log("没有挑战可买保险。"); return; }
-        if (insuranceActive) { alert("已经购买过保险，请先挑战。"); return; }
-        const cost = getEffectiveCost(levels[level-1].cost);
-        const insurancePrice = Math.floor(cost * 0.5);
-        if (money < insurancePrice) { alert("资金不足，无法购买保险。"); return; }
-        money -= insurancePrice;
-        insuranceActive = true;
-        log(`🛡️ 已购买保险（花费 ${insurancePrice}），失败不扣奖金。`);
-        updateUI();
+      if (level>MAX_LEVEL || insured) return;
+      let price = Math.floor(getEffectiveCost(levels[level-1].cost)*0.5);
+      if (money < price) { alert('资金不足'); return; }
+      money -= price;
+      insured = true;
+      log(`🛡️ 保险已购买 (${price}元)`);
+      updateUI();
     }
-
     function doChallenge() {
-        if (level > maxLevel) { log("🎉 恭喜！已通关所有等级！"); return; }
-        const lv = levels[level-1];
-        const cost = getEffectiveCost(lv.cost);
-        if (money < cost) { log("资金不足！"); return; }
-        money -= cost;
-        let effectiveProb = getEffectiveProb(lv.prob);
-        let msg = `🎲 支付 ${cost}，概率 ${(effectiveProb*100).toFixed(1)}%... `;
-
-        const hadInsurance = insuranceActive;
-        bribeTotalSpent = 0;
-        insuranceActive = false;
-
-        if (Math.random() < effectiveProb) {
-            let reward = lv.reward;
-            winStreak++;
-            if (winStreak >= 3) {
-                let bonus = Math.floor(reward * 0.2);
-                reward += bonus;
-                msg += `🔥 连胜${winStreak}次！额外+${bonus}，`;
-            }
-            money += reward;
-            streakBonus += reward;
-            level++;
-            msg += `赢得 ${reward}！`;
-
-            if (Math.random() < 0.3) {
-                const event = EVENTS[Math.floor(Math.random() * EVENTS.length)];
-                event.effect();
-                msg += ` ✨ ${event.desc}`;
-            }
-
-            if (level > maxLevel) msg += " 🏆 全通！";
-            updateUI();
-            log(msg);
-            if (level > maxLevel) {
-                alert("🏆 恭喜！你征服了所有 8 级挑战！");
-                document.getElementById('continue-buttons').style.display = 'none';
-                streakBonus = 0;
-                updateUI();
-                checkAndUpdateRecords();
-            } else {
-                document.getElementById('continue-buttons').style.display = 'block';
-            }
-        } else {
-            msg += "❌ 失败。";
-            if (!hadInsurance && streakBonus > 0) {
-                let loss = Math.floor(streakBonus / 3);
-                if (loss > 0) {
-                    money = Math.max(0, money - loss);
-                    streakBonus -= loss;
-                    msg += ` 扣除奖金1/3（${loss}）`;
-                }
-            } else if (hadInsurance) {
-                msg += " 🛡️ 保险生效！";
-            }
-            winStreak = 0;
-            level = 1;
-            streakBonus = 0;
-            msg += " 回到第1级。";
-            updateUI();
-            log(msg);
-            document.getElementById('continue-buttons').style.display = 'none';
-            checkAndUpdateRecords();
+      if (level > MAX_LEVEL) return;
+      let lv = levels[level-1];
+      let cost = getEffectiveCost(lv.cost);
+      if (money < cost) return;
+      money -= cost;
+      let prob = getCurrentProb();
+      let hadInsurance = insured;
+      bribeSpent = 0; insured = false;
+      let msg = `🎲 支付${cost}，概率${(prob*100).toFixed(1)}%… `;
+      if (Math.random() < prob) {
+        let reward = lv.reward;
+        winStreak++;
+        if (winStreak >= 3) { let b = Math.floor(reward*0.2); reward += b; msg += `🔥连胜+${b} `; }
+        money += reward; streakBonus += reward; level++;
+        msg += `赢得${reward}！`;
+        if (Math.random()<0.3) {
+          let ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+          ev.effect(); msg += ` ✨${ev.desc}`;
         }
+        if (level > MAX_LEVEL) { msg += " 🏆通关！"; document.getElementById('continue-area').innerHTML=''; }
+        else document.getElementById('continue-area').innerHTML = '<button class="btn-continue" id="btn-continue">▶ 继续挑战</button>';
+        updateUI();
+        log(msg);
+        if (level > MAX_LEVEL) { alert("🏆 通关！"); streakBonus=0; updateUI(); checkRecord(); }
+      } else {
+        msg += "❌ 失败。";
+        if (!hadInsurance && streakBonus>0) {
+          let loss = Math.floor(streakBonus/3);
+          money = Math.max(0, money-loss); streakBonus -= loss;
+          msg += `扣${loss}`;
+        } else if (hadInsurance) msg += " 🛡️保险生效";
+        winStreak=0; level=1; streakBonus=0;
+        msg += " 归1级";
+        document.getElementById('continue-area').innerHTML='';
+        updateUI(); log(msg); checkRecord();
+      }
     }
-
-    function continueGame() {
-        document.getElementById('continue-buttons').style.display = 'none';
-        doChallenge();
-    }
-
     function resetProgress() {
-        level = 1;
-        restartCount++;
-        winStreak = 0;
-        streakBonus = 0;
-        bribeTotalSpent = 0;
-        insuranceActive = false;
-        let mult = (1 + restartCount * costPenaltyRate).toFixed(2);
-        log(`🔄 重置至第1级。重置次数：${restartCount}，成本倍率：${mult}x`);
-        updateUI();
-        document.getElementById('continue-buttons').style.display = 'none';
-        checkAndUpdateRecords();
+      level=1; restartCount++; winStreak=0; streakBonus=0; bribeSpent=0; insured=false;
+      updateUI(); log(`🔄 重置进度，成本倍率${(1+getCostPenalty()).toFixed(2)}x`); checkRecord();
     }
-
     function restartGame() {
-        money = 1000;
-        streakBonus = 0;
-        level = 1;
-        winStreak = 0;
-        restartCount = 0;
-        bribeTotalSpent = 0;
-        insuranceActive = false;
-        updateUI();
-        log("🔁 游戏已重启，所有状态重置。");
-        document.getElementById('continue-buttons').style.display = 'none';
-        document.getElementById('btn-challenge').disabled = false;
+      money=1000; streakBonus=0; level=1; winStreak=0; restartCount=0; bribeSpent=0; insured=false;
+      updateUI(); log('🔁 重新开始');
     }
-
     function exitGame() {
-        alert(`游戏结束！最终资金：${money}`);
-        document.getElementById('btn-challenge').disabled = true;
-        document.getElementById('btn-bribe').disabled = true;
-        document.getElementById('btn-insurance').disabled = true;
-        document.getElementById('btn-reset').disabled = true;
-        document.getElementById('continue-buttons').style.display = 'none';
-        log("👋 已退出，刷新页面可重新开始。");
-        checkAndUpdateRecords();
+      document.getElementById('btn-challenge').disabled = true;
+      log('👋 游戏结束'); checkRecord();
     }
 
-    // 初始化
-    loadTopRecords();
+    window.doBribe = doBribe;
+    window.buyInsurance = buyInsurance;
+    window.doChallenge = doChallenge;
+    window.resetProgress = resetProgress;
+    window.restartGame = restartGame;
+    window.exitGame = exitGame;
+    window.continueGame = ()=>{ document.getElementById('continue-area').innerHTML=''; doChallenge(); };
+
+    loadRecords();
     updateUI();
+    document.getElementById('btn-challenge').addEventListener('click', doChallenge);
+    document.getElementById('btn-bribe').addEventListener('click', doBribe);
+    document.getElementById('btn-insurance').addEventListener('click', buyInsurance);
+    document.getElementById('btn-reset').addEventListener('click', resetProgress);
+    document.getElementById('btn-restart').addEventListener('click', restartGame);
+    document.getElementById('btn-exit').addEventListener('click', exitGame);
+  })();
 </script>
 </body>
 </html>
