@@ -177,20 +177,18 @@
       <button class="btn-exit" id="btn-exit">🚪 退出</button>
     </div>
     <div id="continue-area" style="display: flex; justify-content: center; margin-top: 8px;"></div>
-    <div class="log-area" id="log">🍊 欢迎！赢下9级即可通关，前期友好后期地狱。</div>
+    <div class="log-area" id="log">🍊 适合大学生体质的小游戏，勿破防。</div>
   </div>
   <div class="right-panel">
     <div class="rules-box">
-      <h3>📜 规则</h3>
+      <h3>📜 玩法</h3>
       <ul class="rules-list">
-        <li>初始资金 <b>1000</b>，每次挑战支付成本。</li>
-        <li>获胜得奖金并升级，失败扣连胜奖金 <b>1/3</b> 并归1级。</li>
-        <li>🔄 主动重置：成本递增，首次+5%，之后每次+3%。</li>
-        <li>💰 贿赂提升概率（前期便宜后期贵），上限<b>70%</b>。</li>
-        <li>🛡️ 保险：支付50%成本，失败免受扣除。</li>
-        <li>🔥 连胜≥3次额外奖励20%奖金。</li>
-        <li>✨ 随机事件（30%），五花八门。</li>
-        <li>🏆 <b>连续通过全部9级即通关</b>。</li>
+        <li>💰 支付 <b>成本</b> 进行挑战，获胜可得 <b>奖金</b> 并升级。</li>
+        <li>🎯 连胜通过全部 <b>9级</b> 即通关；失败扣除当前连胜奖金的 <b>1/3</b> 并回到第1级。</li>
+        <li>🔄 可随时 <b>主动重置</b>（见好就收），重置后成本会小幅递增。</li>
+        <li>💸 <b>贿赂</b>：花钱临时提高获胜概率（上限70%），仅下次挑战有效。</li>
+        <li>🛡️ <b>保险</b>：支付奖金的15%，若失败可免扣连胜奖金。</li>
+        <li>🔥 连胜 ≥3 次触发额外奖金加成，随机事件增加变数。</li>
       </ul>
     </div>
     <div>
@@ -212,33 +210,30 @@
     let insured = false;
     let topRecords = [];
 
-    // 9级难度曲线：前期简单(高概率低成本)，后期断崖式下跌
+    // 9级难度曲线：前期极简单（高概率低奖金），后期断崖式下跌
     const levels = [
-      { cost: 50,  prob: 0.85, reward: 80 },    // L1: 极易
-      { cost: 100, prob: 0.75, reward: 180 },   // L2: 简单
-      { cost: 160, prob: 0.65, reward: 300 },   // L3: 舒适
-      { cost: 240, prob: 0.50, reward: 550 },   // L4: 中等
-      { cost: 350, prob: 0.35, reward: 1100 },  // L5: 稍有难度
-      { cost: 500, prob: 0.22, reward: 2500 },  // L6: 困难
-      { cost: 800, prob: 0.12, reward: 6000 },  // L7: 极难
-      { cost: 1300,prob: 0.05, reward: 18000 }, // L8: 地狱
-      { cost: 2200,prob: 0.02, reward: 80000 }  // L9: 几乎不可能
+      { cost: 50,  prob: 0.90, reward: 70 },
+      { cost: 80,  prob: 0.80, reward: 150 },
+      { cost: 130, prob: 0.70, reward: 260 },
+      { cost: 200, prob: 0.55, reward: 450 },
+      { cost: 320, prob: 0.40, reward: 900 },
+      { cost: 500, prob: 0.25, reward: 2000 },
+      { cost: 800, prob: 0.12, reward: 5000 },
+      { cost: 1300,prob: 0.05, reward: 15000 },
+      { cost: 2200,prob: 0.02, reward: 70000 }
     ];
     const MAX_LEVEL = levels.length;
 
-    // 重置惩罚累积
     function getCostPenalty() {
       if (restartCount === 0) return 0;
-      return 0.05 + (restartCount - 1) * 0.03;
+      return 0.03 + (restartCount - 1) * 0.02;
     }
 
-    // 动态贿赂成本
     function getBribeCostPerPercent() {
-      return Math.floor(100 + (level - 1) * 30); // L1:100, L9:340
+      return Math.floor(80 + (level - 1) * 30);
     }
     const MAX_PROB = 0.70;
 
-    // 扩充的随机事件池（18个）
     const EVENTS = [
       { desc: "🍀 捡到150元", effect: ()=> { money += 150; } },
       { desc: "💼 报销本次成本", effect: ()=> { money += getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost); } },
@@ -340,16 +335,16 @@
       updateUI();
     }
     function buyInsurance() {
-      if (level>MAX_LEVEL || insured) return;
-      let price = Math.floor(getEffectiveCost(levels[level-1].cost)*0.5);
-      if (money < price) { alert('资金不足'); return; }
-      money -= price;
+      if (level > MAX_LEVEL || insured) return;
+      const lv = levels[level-1];
+      const insurancePrice = Math.floor(lv.reward * 0.15);
+      if (money < insurancePrice) { alert('资金不足'); return; }
+      money -= insurancePrice;
       insured = true;
-      log(`🛡️ 保险已购买 (${price}元)`);
+      log(`🛡️ 已购保险（${insurancePrice}元 = 奖金${lv.reward}的15%），失败免扣奖金`);
       updateUI();
     }
 
-    // 核心挑战逻辑（被“挑战”和“继续挑战”共同调用）
     function doChallenge() {
       if (level > MAX_LEVEL) return;
       let lv = levels[level-1];
@@ -389,7 +384,9 @@
           let loss = Math.floor(streakBonus/3);
           money = Math.max(0, money-loss); streakBonus -= loss;
           msg += `扣${loss}`;
-        } else if (hadInsurance) msg += " 🛡️保险生效";
+        } else if (hadInsurance) {
+          msg += " 🛡️保险生效，免扣奖金";
+        }
         winStreak=0; level=1; streakBonus=0;
         msg += " 归1级";
         document.getElementById('continue-area').innerHTML='';
