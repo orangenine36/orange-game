@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
-  <title>ORANGE-GAME · 连胜挑战</title>
+  <title>ORANGE-GAME · 9级连胜挑战</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -177,26 +177,27 @@
       <button class="btn-exit" id="btn-exit">🚪 退出</button>
     </div>
     <div id="continue-area" style="display: flex; justify-content: center; margin-top: 8px;"></div>
-    <div class="log-area" id="log">🍊 欢迎！用策略和运气征服赌局。</div>
+    <div class="log-area" id="log">🍊 欢迎！赢下9级即可通关，前期友好后期地狱。</div>
   </div>
   <div class="right-panel">
     <div class="rules-box">
-      <h3>📜 玩法规则</h3>
+      <h3>📜 规则</h3>
       <ul class="rules-list">
-        <li>💰 初始资金 <b>1000</b>，每次挑战支付成本。</li>
-        <li>🎯 获胜得奖金并升级，失败扣连胜奖金 <b>1/3</b> 并归1级。</li>
-        <li>🔄 主动重置：首次+5%，之后每次+3%，逐次递增。</li>
-        <li>💸 贿赂提升概率，<b>前期便宜后期贵</b>，上限<b>70%</b>。</li>
-        <li>🛡️ 保险：支付50%成本，免扣奖金。</li>
-        <li>🔥 连胜≥3次额外+20%奖金。</li>
-        <li>✨ 丰富随机事件 (30%触发)。</li>
+        <li>初始资金 <b>1000</b>，每次挑战支付成本。</li>
+        <li>获胜得奖金并升级，失败扣连胜奖金 <b>1/3</b> 并归1级。</li>
+        <li>🔄 主动重置：成本递增，首次+5%，之后每次+3%。</li>
+        <li>💰 贿赂提升概率（前期便宜后期贵），上限<b>70%</b>。</li>
+        <li>🛡️ 保险：支付50%成本，失败免受扣除。</li>
+        <li>🔥 连胜≥3次额外奖励20%奖金。</li>
+        <li>✨ 随机事件（30%），五花八门。</li>
+        <li>🏆 <b>连续通过全部9级即通关</b>。</li>
       </ul>
     </div>
     <div>
       <h3 class="hall-title">🏆 个人名人堂</h3>
       <ul class="record-list" id="top3-list"><li>暂无记录</li></ul>
     </div>
-    <div class="footer-note">8级挑战 · 通关率约3%</div>
+    <div class="footer-note">9级挑战 · 通关率&lt;3%</div>
   </div>
 </div>
 <script>
@@ -211,29 +212,33 @@
     let insured = false;
     let topRecords = [];
 
-    // 重置成本累进：首次+5%，之后每次+3%
+    // 9级难度曲线：前期简单(高概率低成本)，后期断崖式下跌
+    const levels = [
+      { cost: 50,  prob: 0.85, reward: 80 },    // L1: 极易
+      { cost: 100, prob: 0.75, reward: 180 },   // L2: 简单
+      { cost: 160, prob: 0.65, reward: 300 },   // L3: 舒适
+      { cost: 240, prob: 0.50, reward: 550 },   // L4: 中等
+      { cost: 350, prob: 0.35, reward: 1100 },  // L5: 稍有难度
+      { cost: 500, prob: 0.22, reward: 2500 },  // L6: 困难
+      { cost: 800, prob: 0.12, reward: 6000 },  // L7: 极难
+      { cost: 1300,prob: 0.05, reward: 18000 }, // L8: 地狱
+      { cost: 2200,prob: 0.02, reward: 80000 }  // L9: 几乎不可能
+    ];
+    const MAX_LEVEL = levels.length;
+
+    // 重置惩罚累积
     function getCostPenalty() {
       if (restartCount === 0) return 0;
       return 0.05 + (restartCount - 1) * 0.03;
     }
 
-    const levels = [
-      { cost: 60,  prob: 0.75, reward: 90 },
-      { cost: 120, prob: 0.60, reward: 220 },
-      { cost: 200, prob: 0.45, reward: 450 },
-      { cost: 350, prob: 0.30, reward: 1000 },
-      { cost: 600, prob: 0.18, reward: 2800 },
-      { cost: 1000,prob: 0.10, reward: 8000 },
-      { cost: 1800,prob: 0.05, reward: 25000 },
-      { cost: 3000,prob: 0.02, reward: 100000 }
-    ];
-    const MAX_LEVEL = levels.length;
-
+    // 动态贿赂成本
     function getBribeCostPerPercent() {
-      return Math.floor(120 + (level - 1) * 35);
+      return Math.floor(100 + (level - 1) * 30); // L1:100, L9:340
     }
     const MAX_PROB = 0.70;
 
+    // 扩充的随机事件池（18个）
     const EVENTS = [
       { desc: "🍀 捡到150元", effect: ()=> { money += 150; } },
       { desc: "💼 报销本次成本", effect: ()=> { money += getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost); } },
@@ -243,7 +248,16 @@
       { desc: "🎁 奖金增加80元", effect: ()=> { money += 80; } },
       { desc: "🧧 获得当前等级成本一半", effect: ()=> { money += Math.floor(getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost)/2); } },
       { desc: "⚡ 报销本次成本", effect: ()=> { money += getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost); } },
-      { desc: "🛡️ 获得临时护盾(无效果)", effect: ()=> {} }
+      { desc: "🌠 陨石坠落，损失120元", effect: ()=> { money = Math.max(0, money - 120); } },
+      { desc: "📚 上课迟到被罚50元", effect: ()=> { money = Math.max(0, money - 50); } },
+      { desc: "👽 外星人绑架，扣除奖金1/5", effect: ()=> { let loss = Math.floor(streakBonus * 0.2); money = Math.max(0, money - loss); streakBonus -= loss; } },
+      { desc: "🎓 拿到奖学金+200元", effect: ()=> { money += 200; } },
+      { desc: "🦠 感染病毒，损失当前资金10%", effect: ()=> { money = Math.max(0, money - Math.floor(money * 0.1)); } },
+      { desc: "🍔 外卖红包+60元", effect: ()=> { money += 60; } },
+      { desc: "🎰 赌场促销，报销本次成本一半", effect: ()=> { money += Math.floor(getEffectiveCost(levels[Math.min(level,MAX_LEVEL)-1].cost)/2); } },
+      { desc: "🧹 打扫卫生发现50元", effect: ()=> { money += 50; } },
+      { desc: "⚡ 雷击损坏设备，损失90元", effect: ()=> { money = Math.max(0, money - 90); } },
+      { desc: "🛸 UFO飞过，无事发生", effect: ()=> {} }
     ];
 
     function getEffectiveCost(base) { return Math.floor(base * (1 + getCostPenalty())); }
@@ -268,7 +282,7 @@
       const penalty = getCostPenalty();
       container.innerHTML = `
         <div class="stat-item"><span>💵 资金</span><span class="stat-value">${money}</span></div>
-        <div class="stat-item"><span>🎯 等级</span><span class="stat-value">${level}</span></div>
+        <div class="stat-item"><span>🎯 等级</span><span class="stat-value">${level}/${MAX_LEVEL}</span></div>
         <div class="stat-item"><span>🔥 连胜</span><span class="stat-value streak-highlight">${winStreak}</span></div>
         <div class="stat-item"><span>💎 连胜奖金</span><span class="stat-value">${streakBonus}</span></div>
         <div class="stat-item"><span>📈 成本</span><span class="stat-value">${cost}</span></div>
@@ -334,11 +348,13 @@
       log(`🛡️ 保险已购买 (${price}元)`);
       updateUI();
     }
+
+    // 核心挑战逻辑（被“挑战”和“继续挑战”共同调用）
     function doChallenge() {
       if (level > MAX_LEVEL) return;
       let lv = levels[level-1];
       let cost = getEffectiveCost(lv.cost);
-      if (money < cost) return;
+      if (money < cost) { log('资金不足！'); return; }
       money -= cost;
       let prob = getCurrentProb();
       let hadInsurance = insured;
@@ -354,11 +370,19 @@
           let ev = EVENTS[Math.floor(Math.random()*EVENTS.length)];
           ev.effect(); msg += ` ✨${ev.desc}`;
         }
-        if (level > MAX_LEVEL) { msg += " 🏆通关！"; document.getElementById('continue-area').innerHTML=''; }
-        else document.getElementById('continue-area').innerHTML = '<button class="btn-continue" id="btn-continue">▶ 继续挑战</button>';
+        if (level > MAX_LEVEL) {
+          msg += " 🏆通关！";
+          document.getElementById('continue-area').innerHTML='';
+        } else {
+          document.getElementById('continue-area').innerHTML = '<button class="btn-continue" id="btn-continue">▶ 继续挑战</button>';
+          document.getElementById('btn-continue').addEventListener('click', ()=>{
+            document.getElementById('continue-area').innerHTML='';
+            doChallenge();
+          });
+        }
         updateUI();
         log(msg);
-        if (level > MAX_LEVEL) { alert("🏆 通关！"); streakBonus=0; updateUI(); checkRecord(); }
+        if (level > MAX_LEVEL) { alert("🏆 恭喜！你通过了全部9级！"); streakBonus=0; updateUI(); checkRecord(); }
       } else {
         msg += "❌ 失败。";
         if (!hadInsurance && streakBonus>0) {
@@ -372,16 +396,20 @@
         updateUI(); log(msg); checkRecord();
       }
     }
+
     function resetProgress() {
       level=1; restartCount++; winStreak=0; streakBonus=0; bribeSpent=0; insured=false;
+      document.getElementById('continue-area').innerHTML='';
       updateUI(); log(`🔄 重置进度，成本倍率${(1+getCostPenalty()).toFixed(2)}x`); checkRecord();
     }
     function restartGame() {
       money=1000; streakBonus=0; level=1; winStreak=0; restartCount=0; bribeSpent=0; insured=false;
+      document.getElementById('continue-area').innerHTML='';
       updateUI(); log('🔁 重新开始');
     }
     function exitGame() {
       document.getElementById('btn-challenge').disabled = true;
+      document.getElementById('continue-area').innerHTML='';
       log('👋 游戏结束'); checkRecord();
     }
 
@@ -391,7 +419,6 @@
     window.resetProgress = resetProgress;
     window.restartGame = restartGame;
     window.exitGame = exitGame;
-    window.continueGame = ()=>{ document.getElementById('continue-area').innerHTML=''; doChallenge(); };
 
     loadRecords();
     updateUI();
